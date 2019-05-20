@@ -5,44 +5,13 @@ import utils.XMLPrintable;
 public class Token implements XMLPrintable {
     public int number;
     public String value;
-    public String type;
+    public TokenType type;
     public int line;
     public boolean valid;
 
-    public static class Type {
-        public static String keyword = "keyword";
-        public static String identifier = "identifier";
-        public static String floatConstant = "float_constant";
-        public static String integerConstant = "integer_constant";
-        public static String punctuator = "punctuator";
-        public static String eof = "eof";
-        public static String unknown = "unknown";
-
-        public static String lshift = "<<";
-        public static String rshift = ">>";
-
-        public static String add_assign = "+=";
-        public static String sub_assign = "-=";
-        public static String div_assign = "/=";
-        public static String mult_assign = "*=";
-        public static String mod_assign = "%=";
-        public static String xor_assign = "^=";
-        public static String or_assign = "|=";
-        public static String and_assign = "&=";
-
-        public static String large_equal = ">=";
-        public static String less_equal = "<=";
-        public static String not_equal = "!=";
-        public static String equal = "==";
-
-        public static String rel_or = "||";
-        public static String rel_and = "&&";
-
-    }
-
     public static int count = 0;
 
-    public Token(String value, String type, int line, boolean valid) {
+    public Token(String value, TokenType type, int line, boolean valid) {
         this.number = Token.count;
         Token.count += 1;
 

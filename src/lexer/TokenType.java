@@ -1,0 +1,37 @@
+package lexer;
+
+public enum TokenType {
+    // Single-character tokens.
+    LEFT_PAREN, RIGHT_PAREN,
+    LEFT_BRACE, RIGHT_BRACE,
+    LEFT_BRACKET, RIGHT_BRACKET,
+    COMMA, SEMICOLON, NOT,
+
+    // One or two character tokens.
+    ADD, ADD_ASSIGN,
+    SUB, SUB_ASSIGN,
+    MULTI, MULTI_ASSIGN,
+    DIV, DIV_ASSIGN,
+    MOD, MOD_ASSIGN,
+    AND, AND_ASSIGN, REL_AND,
+    OR, OR_ASSIGN, REL_OR,
+    XOR, XOR_ASSIGN,
+
+    BANG, BANG_EQUAL,
+    ASSIGN, EQUAL,
+    GREATER, GREATER_EQUAL, RIGHT_SHIFT,
+    LESS, LESS_EQUAL, LEFT_SHIFT,
+
+    // Literals.
+    IDENTIFIER, STRING, INTEGER_CONSTANT, FLOAT_CONSTANT, CHARACTER,
+
+    // Keywords.
+    IF, ELSE, WHILE, RETURN, PRINT, BREAK, CONTINUE,
+
+    // Types
+    INT, FLOAT, CHAR, VOID,
+
+    EOF,
+    UNKNOWN
+
+}

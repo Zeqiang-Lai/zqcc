@@ -3,6 +3,7 @@ package main;
 import lexer.Lexer;
 import lexer.SourceBuffer;
 import lexer.Token;
+import lexer.TokenType;
 import utils.XMLHelper;
 
 import java.io.FileNotFoundException;
@@ -11,7 +12,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class Main {
+public class LexerRunner {
 
     static String readFile(String path, Charset encoding) throws IOException {
         byte[] encoded = Files.readAllBytes(Paths.get(path));
@@ -23,7 +24,7 @@ public class Main {
         if(args.length == 0) {
             System.out.println("No specified source file. Use default: "+source_path);
         } else {
-            source_path = args[1];
+            source_path = args[0];
         }
 
         String source = null;
@@ -38,7 +39,7 @@ public class Main {
         xmlHelper.append("<project>");
         Lexer lexer = new Lexer(buff);
         Token token = lexer.scan();
-        while (token.type != Token.Type.eof) {
+        while (token.type != TokenType.EOF) {
 //            System.out.println(token.type + "| " + token.value + "| " + token.line);
             xmlHelper.append(token);
             token = lexer.scan();

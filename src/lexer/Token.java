@@ -21,6 +21,14 @@ public class Token implements XMLPrintable {
         this.valid = valid;
     }
 
+    public Token(int number, String value, TokenType type, int line, boolean valid) {
+        this.number = number;
+        this.value = value;
+        this.type = type;
+        this.line = line;
+        this.valid = valid;
+    }
+
     @Override
     public String toString() {
         return number + ":" +
@@ -53,4 +61,36 @@ public class Token implements XMLPrintable {
         buffer.append(indentString(indent));
         buffer.append(text);
     }
+
+    static public Token fromXML(String[] strs) {
+        int number = -1;
+        String value = null;
+        TokenType type = null;
+        int line = -1;
+        boolean valid = true;
+
+        for(String str : strs) {
+            str = str.trim();
+            if(str.startsWith("<token>") || str.startsWith("</token>"))
+                continue;
+            if(str.startsWith("<number>") && str.endsWith("</number>"))
+                number = Integer.valueOf(str.substring(8, str.length()-9));
+            else if(str.startsWith("<value>") && str.endsWith("</value>"))
+                value = str.substring(7, str.length()-8);
+            else if(str.startsWith("<type>") && str.endsWith("</type>"))
+                type = TokenType.valueOf(str.substring(6, str.length()-7));
+            else if(str.startsWith("<line>") && str.endsWith("</line>"))
+                line = Integer.valueOf(str.substring(6, str.length()-7));
+            else if(str.startsWith("<valid>") && str.endsWith("</valid>"))
+                valid = Boolean.valueOf(str.substring(7, str.length()-8));
+            else
+                throw new IllegalArgumentException("invalid xml string: " + str);
+        }
+        if(number == -1 || value == null || type == null || line == -1)
+            throw new IllegalArgumentException("invalid xml string: " + strs);
+
+        return new Token(number, value, type, line, valid);
+    }
+
+
 }

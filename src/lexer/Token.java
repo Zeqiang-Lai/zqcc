@@ -30,15 +30,27 @@ public class Token implements XMLPrintable {
                 " valid= " + valid;
     }
 
-    public String toXMLString() {
+    public String toXMLString(int indent) {
         StringBuffer str = new StringBuffer();
-        str.append("<token>\n");
-        str.append("<number>" + this.number + "</number>\n");
-        str.append("<value>" + this.value + "</value>\n");
-        str.append("<type>" + this.type + "</type>\n");
-        str.append("<line>" + this.line + "</line>\n");
-        str.append("<valid>" + this.valid + "</valid>\n");
-        str.append("</token>");
+        append(str, "<token>\n", indent);
+        append(str, "<number>" + this.number + "</number>\n", indent+1);
+        append(str, "<value>" + this.value + "</value>\n", indent+1);
+        append(str,"<type>" + this.type + "</type>\n", indent+1);
+        append(str,"<line>" + this.line + "</line>\n", indent+1);
+        append(str,"<valid>" + this.valid + "</valid>\n", indent+1);
+        append(str,"</token>\n", indent);
         return new String(str);
+    }
+
+    private String indentString(int num) {
+        StringBuilder builder = new StringBuilder();
+        for(int i=0; i<num; ++i)
+            builder.append("    ");
+        return builder.toString();
+    }
+
+    private void append(StringBuffer buffer, String text, int indent) {
+        buffer.append(indentString(indent));
+        buffer.append(text);
     }
 }

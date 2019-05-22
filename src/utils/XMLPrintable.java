@@ -1,5 +1,5 @@
 package utils;
 
 public interface XMLPrintable {
-    String toXMLString();
+    String toXMLString(int indent);
 }

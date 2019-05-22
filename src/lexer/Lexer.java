@@ -25,7 +25,7 @@ public class Lexer {
 
         data_types = new HashMap<>();
         data_types.put("int",     INT);
-        data_types.put("float",   FLOAT);
+        data_types.put("double", DOUBLE);
         data_types.put("char",  CHAR);
         data_types.put("void", VOID);
     }
@@ -53,7 +53,7 @@ public class Lexer {
             case '*': return makeToken(source.peek('=') ? MULTI_ASSIGN : MULTI);
             case '/': return makeToken(source.peek('=') ? DIV_ASSIGN : DIV);
             case '%': return makeToken(source.peek('=') ? MOD_ASSIGN : MOD);
-            case '!': return makeToken(source.peek('=') ? BANG_EQUAL : BANG);
+            case '!': return makeToken(source.peek('=') ? NOT_EQUAL : REL_NOT);
             case '=': return makeToken(source.peek('=') ? EQUAL : ASSIGN);
             case '^': return makeToken(source.peek('=') ? XOR_ASSIGN : XOR);
 
@@ -62,7 +62,7 @@ public class Lexer {
             case '>': return makeToken('=', '>', GREATER_EQUAL, RIGHT_SHIFT, GREATER);
             case '<': return makeToken('=', '<', LESS_EQUAL, LEFT_SHIFT, LESS);
 
-            case '~': return makeToken(NOT);
+            case '~': return makeToken(COMPL);
             case '(': return makeToken(LEFT_PAREN);
             case ')': return makeToken(RIGHT_PAREN);
             case '[': return makeToken(LEFT_BRACKET);
@@ -129,7 +129,7 @@ public class Lexer {
         source.back();
 
         String token_value = source.substring(start, source.getOffset());
-        return new Token(token_value, FLOAT_CONSTANT, line, true);
+        return new Token(token_value, DOUBLE_CONSTANT, line, true);
     }
 
     private Token charLiteral() {
@@ -140,9 +140,9 @@ public class Lexer {
         }
         String token_value = source.substring(start, source.getOffset());
         if(ch != '\'') {
-            return new Token(token_value, CHARACTER, line, false);
+            return new Token(token_value, CHARACTER_CONSTANT, line, false);
         } else {
-            return new Token(token_value, CHARACTER, line, true);
+            return new Token(token_value, CHARACTER_CONSTANT, line, true);
         }
     }
 

@@ -4,7 +4,7 @@ import lexer.Lexer;
 import lexer.SourceBuffer;
 import lexer.Token;
 import lexer.TokenType;
-import utils.XMLHelper;
+import utils.XMLBuilder;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class LexerRunner {
         }
         SourceBuffer buff = new SourceBuffer(source);
 
-        XMLHelper xmlHelper = new XMLHelper();
+        XMLBuilder xmlHelper = new XMLBuilder();
         xmlHelper.append("<project>");
         Lexer lexer = new Lexer(buff);
         Token token = lexer.scan();

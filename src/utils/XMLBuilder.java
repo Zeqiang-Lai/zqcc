@@ -4,17 +4,17 @@ import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.List;
 
-public class XMLHelper {
+public class XMLBuilder {
     private StringBuffer content = new StringBuffer();
 
     public void append(List<XMLPrintable> elements) {
         for(XMLPrintable element : elements) {
-            content.append(element.toXMLString()).append("\n");
+            content.append(element.toXMLString(1));
         }
     }
 
     public void append(XMLPrintable element) {
-        content.append(element.toXMLString()).append("\n");
+        content.append(element.toXMLString(1));
     }
 
     public void append(String text) {

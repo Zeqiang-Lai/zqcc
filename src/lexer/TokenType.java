@@ -1,5 +1,8 @@
 package lexer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public enum TokenType {
     // Single-character tokens.
     LEFT_PAREN, RIGHT_PAREN,
@@ -32,6 +35,18 @@ public enum TokenType {
     INT, DOUBLE, CHAR, VOID,
 
     EOF,
-    UNKNOWN
+    UNKNOWN;
 
+    static public Map<TokenType, String> value = new HashMap<>();
+
+    static {
+        value.put(LEFT_PAREN, "(");
+        value.put(RIGHT_PAREN, ")");
+        value.put(LEFT_BRACE, "{");
+        value.put(RIGHT_BRACE, "}");
+        value.put(LEFT_BRACKET, "[");
+        value.put(RIGHT_BRACKET, "]");
+        value.put(SEMICOLON, ";");
+        value.put(ASSIGN, "=");
+    }
 }

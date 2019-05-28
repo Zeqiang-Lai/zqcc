@@ -37,5 +37,6 @@ public class ErrorCollector {
                     error.description;
             System.out.println(msg);
         }
+        System.out.println(errors.size() + " errors generated.");
     }
 }

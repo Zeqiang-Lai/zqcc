@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Vector;
 
 import static lexer.TokenType.*;
+import static error.ParserError.ErrorType.*;
 
 public class Parser {
     // region Properties
@@ -39,8 +40,15 @@ public class Parser {
      * Error recovery.
      */
     private int recovery(int index) {
-
-        return index;
+        int i;
+        int current_line = tokens.get(index).line;
+        for(i=index+1; i<tokens.size(); ++i) {
+            if(tokens.get(i).line != current_line)
+                return i;
+            if(check(i, SEMICOLON, RIGHT_PAREN))
+                return i+1;
+        }
+        return i;
     }
 
     private StmtNode.CompilationUnit parseCompilationUnit(int index) throws ParserError {
@@ -49,7 +57,7 @@ public class Parser {
 
         ParserError best_error = null;
 
-        while(true) {
+        while(!isAtEnd(index)) {
             try {
                 item = parseDeclaration(index);
                 index = last_index;
@@ -71,7 +79,11 @@ public class Parser {
                 if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
                     best_error = parserError;
             }
-            break;
+            if(isAtEnd(index)) {
+                break;
+            }
+            index = recovery(index);
+            errorCollector.add(best_error);
         }
 
         if(isAtEnd(index))
@@ -150,7 +162,7 @@ public class Parser {
             specs.add(tokens.get(index));
         }
         if(specs.isEmpty())
-            throw new ParserError(index, "expect specifiers", tokens);
+            throw new ParserError(index, "expect specifiers", tokens, BEFORE);
         //TODO: raise error if it is empty.
         last_index = index + 1;
         return specs;
@@ -194,7 +206,7 @@ public class Parser {
             else {
                 num = parseExperssion(right+1);
                 if(num == null) {
-                    throw new ParserError(last_index, "unexpected token in array size", tokens);
+                    throw new ParserError(last_index, "unexpected token in array size", tokens, AFTER);
                 }
             }
 
@@ -213,7 +225,7 @@ public class Parser {
         }
 
         else {
-            throw new ParserError(start, "invalid declarator", tokens);
+            throw new ParserError(start, "invalid declarator", tokens, AT);
         }
     }
 
@@ -238,7 +250,7 @@ public class Parser {
                 index += 1;
             else if(index != end-1) {
                 last_index = index;
-                throw new ParserError(index, "expect ,", tokens);
+                throw new ParserError(index, "expect ','", tokens, AFTER);
             }else
                 break;
         }
@@ -280,14 +292,21 @@ public class Parser {
         Vector<StmtNode> items = new Vector<>();
         StmtNode item;
 
-        while(true) {
+        int right = -1;
+        try {
+            right = findPairForward(index - 1, LEFT_BRACE);
+        } catch (ParserError parserError) {
+//            errorCollector.add(new ParserError(index, "unmatched { ", tokens, AT));
+        }
+
+        while (!isAtEnd(index)) {
             try {
                 item = parseDeclaration(index);
                 index = last_index;
                 items.add(item);
                 continue;
             } catch (ParserError parserError) {
-                if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                if (best_error == null || best_error.parsed_amount < parserError.parsed_amount)
                     best_error = parserError;
             }
 
@@ -297,11 +316,18 @@ public class Parser {
                 items.add(item);
                 continue;
             } catch (ParserError parserError) {
-                if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                if (best_error == null || best_error.parsed_amount < parserError.parsed_amount)
                     best_error = parserError;
             }
+            if (isAtEnd(index))
+                break;
 
-            break;
+            if (right != -1 && index >= right) {
+                index = right;
+                break;
+            }
+            index = recovery(index);
+            errorCollector.add(best_error);
         }
 
         try {
@@ -309,11 +335,9 @@ public class Parser {
             last_index = index;
             return new StmtNode.Compound(items);
         } catch (ParserError parserError) {
-            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
-                best_error = parserError;
+            errorCollector.add(parserError);
+            return new StmtNode.Compound(items);
         }
-
-        throw best_error;
     }
 
     private StmtNode parseStatement(int index) throws ParserError {
@@ -420,10 +444,18 @@ public class Parser {
         try {
             ExprNode value = parseExperssion(index);
             index = last_index;
-            last_index = match(index, SEMICOLON);
+            try {
+                last_index = match(index, SEMICOLON);
+            } catch (ParserError parserError) {
+                errorCollector.add(parserError);
+            }
             return new StmtNode.Return(value);
         } catch (Exception e) {
-            last_index = match(index, SEMICOLON);
+            try {
+                last_index = match(index, SEMICOLON);
+            } catch (ParserError parserError) {
+                errorCollector.add(parserError);
+            }
             return new StmtNode.Return(null);
         }
     }
@@ -456,7 +488,7 @@ public class Parser {
             last_index = index + 1;
             return new StmtNode.Empty();
         }
-        throw new ParserError(index, "expect semicolon", tokens);
+        throw new ParserError(index, "expect ';'", tokens, AFTER);
     }
 
     // endregion
@@ -815,7 +847,7 @@ public class Parser {
         }
 //        throw best_error;
         // TODO: throw which error is better?
-        throw new ParserError(index, "expect expression", tokens);
+        throw new ParserError(index, "expect expression", tokens, AFTER);
     }
 
     private ExprNode parseIdentifier(int index) throws ParserError {
@@ -834,7 +866,7 @@ public class Parser {
                 constant = Double.valueOf(tokens.get(index).value);
             return new ExprNode.Number(constant);
         } else {
-            throw new ParserError(index, "expect number", tokens);
+            throw new ParserError(index, "expect number", tokens, AFTER);
         }
     }
 
@@ -867,9 +899,13 @@ public class Parser {
         if(match == LEFT_PAREN) {
             String msg = "mismatched parenthesis in declaration";
             return findPairForward(index, LEFT_PAREN, RIGHT_PAREN, msg);
+        }else if(match == LEFT_BRACKET) {
+            String msg = "mismatched square brackets in declaration";
+            return findPairForward(index, LEFT_BRACKET, RIGHT_BRACKET, msg);
+        } else {
+            String msg = "mismatched square brace in declaration";
+            return findPairForward(index, LEFT_BRACE, RIGHT_BRACE, msg);
         }
-        String msg = "mismatched square brackets in declaration";
-        return findPairForward(index, LEFT_BRACKET, RIGHT_BRACKET, msg);
     }
 
     /**
@@ -879,9 +915,12 @@ public class Parser {
         if(match == RIGHT_PAREN) {
             String msg = "mismatched parenthesis in declaration";
             return findPairBackward(index, LEFT_PAREN, RIGHT_PAREN, msg);
+        } else if(match == RIGHT_BRACKET){
+            String msg = "mismatched square brackets in declaration";
+            return findPairBackward(index, LEFT_BRACKET, RIGHT_BRACKET, msg);
         }
-        String msg = "mismatched square brackets in declaration";
-        return findPairBackward(index, LEFT_BRACKET, RIGHT_BRACKET, msg);
+        String msg = "mismatched square brace in declaration";
+        return findPairForward(index, LEFT_BRACE, RIGHT_BRACE, msg);
     }
 
     private int findPairForward(int index, TokenType left, TokenType right, String msg) throws ParserError {
@@ -896,7 +935,7 @@ public class Parser {
                 break;
         }
         if(depth != 0)
-            throw new ParserError(index, msg, tokens);
+            throw new ParserError(index, msg, tokens, AT);
         // TODO: raise mismatch error.
         return i;
     }
@@ -913,7 +952,7 @@ public class Parser {
                 break;
         }
         if(depth != 0)
-            throw new ParserError(index, msg,tokens);
+            throw new ParserError(index, msg,tokens, AT);
         return i;
     }
     // endregion
@@ -923,12 +962,12 @@ public class Parser {
     private int match(int index, TokenType... types) throws ParserError {
         if (isAtEnd(index)) {
 
-            throw new ParserError(index, "expect " + strRepr(types),tokens);
+            throw new ParserError(index, "expect " + strRepr(types),tokens, AFTER);
         }
         if (check(index, types))
             return index + 1;
         else {
-            throw new ParserError(index, "expect " + strRepr(types),tokens);
+            throw new ParserError(index, "expect " + strRepr(types),tokens, AFTER);
         }
     }
 
@@ -945,13 +984,17 @@ public class Parser {
         return index >= tokens.size();
     }
 
+    // TODO: improve it
     private String strRepr(TokenType... types) {
         StringBuilder builder = new StringBuilder();
 
         for(int i = 0; i<types.length; ++i) {
             if(i != 0)
-                builder.append(" or ");
-            builder.append(types[i].toString().toLowerCase());
+                builder.append(" || ");
+            if(value.containsKey(types[i]))
+                builder.append("'" + value.get(types[i]) + "'");
+            else
+                builder.append(types[i].toString().toLowerCase());
         }
 
         return builder.toString();

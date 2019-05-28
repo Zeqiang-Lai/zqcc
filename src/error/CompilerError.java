@@ -1,6 +1,10 @@
 package error;
 
 public class CompilerError extends Exception {
-    String descrption;
+    public String description;
+
+    public CompilerError(String description) {
+        this.description = description;
+    }
 
 }

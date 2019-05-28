@@ -1,6 +1,9 @@
 package parser;
 
-import ast.*;
+import ast.DeclNode;
+import ast.ExprNode;
+import ast.StmtNode;
+import error.ErrorCollector;
 import error.ParserError;
 import lexer.Token;
 import lexer.TokenType;
@@ -15,6 +18,7 @@ public class Parser {
 
     private List<Token> tokens;
     private int last_index;
+    private ErrorCollector errorCollector = ErrorCollector.getInstance();
 
     // endregion
 
@@ -26,14 +30,25 @@ public class Parser {
         try {
             return parseCompilationUnit(0);
         } catch (ParserError parserError) {
-            parserError.printStackTrace();
+            errorCollector.add(parserError);
             return null;
         }
+    }
+
+    /**
+     * Error recovery.
+     */
+    private int recovery(int index) {
+
+        return index;
     }
 
     private StmtNode.CompilationUnit parseCompilationUnit(int index) throws ParserError {
         Vector<StmtNode.Declaration> items = new Vector<>();
         StmtNode.Declaration item;
+
+        ParserError best_error = null;
+
         while(true) {
             try {
                 item = parseDeclaration(index);
@@ -42,6 +57,8 @@ public class Parser {
                 continue;
             } catch (ParserError parserError) {
 //                parserError.printStackTrace();
+                if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                    best_error = parserError;
             }
 
             try {
@@ -51,14 +68,16 @@ public class Parser {
                 continue;
             } catch (ParserError parserError) {
 //                parserError.printStackTrace();
+                if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                    best_error = parserError;
             }
-
             break;
         }
+
         if(isAtEnd(index))
             return new StmtNode.CompilationUnit(items);
         else
-            throw new ParserError();
+            throw best_error;
     }
 
     private StmtNode.Declaration parseFunctionDefinition(int index) throws ParserError {
@@ -131,7 +150,7 @@ public class Parser {
             specs.add(tokens.get(index));
         }
         if(specs.isEmpty())
-            throw new ParserError();
+            throw new ParserError(index, "expect specifiers", tokens);
         //TODO: raise error if it is empty.
         last_index = index + 1;
         return specs;
@@ -149,6 +168,7 @@ public class Parser {
         // identifier the type of the declarator.
         int end = findDeclaratorEnd(index);
         DeclNode decl = parseDeclarator(index, end);
+        // FIXME: last_index could not be end, when error happens.
         last_index = end;
         return decl;
     }
@@ -174,8 +194,7 @@ public class Parser {
             else {
                 num = parseExperssion(right+1);
                 if(num == null) {
-                    throw new ParserError();
-                    // TODO: raise error. unexpected token in array size.
+                    throw new ParserError(last_index, "unexpected token in array size", tokens);
                 }
             }
 
@@ -185,21 +204,20 @@ public class Parser {
 
         // function = declarator(parameter list)
         else if(check(end-1, RIGHT_PAREN)){
-            int right = findPairBackward(end-1, RIGHT_PAREN);
+            int left = findPairBackward(end-1, RIGHT_PAREN);
 
-            DeclNode decl = parseDeclarator(start, right);
-            Vector<DeclNode> params = parseParameterList(right+1);
+            DeclNode decl = parseDeclarator(start, left);
+            Vector<DeclNode> params = parseParameterList(left+1, end);
 
             return new DeclNode.Function(decl, params);
         }
 
         else {
-            throw new ParserError();
-            // TODO: raise syntax error.
+            throw new ParserError(start, "invalid declarator", tokens);
         }
     }
 
-    private Vector<DeclNode> parseParameterList(int index) throws ParserError {
+    private Vector<DeclNode> parseParameterList(int index, int end) throws ParserError {
         Vector<DeclNode> params = new Vector<>();
 
         if(check(index, RIGHT_PAREN)) {
@@ -218,7 +236,10 @@ public class Parser {
 
             if(check(index, COMMA))
                 index += 1;
-            else
+            else if(index != end-1) {
+                last_index = index;
+                throw new ParserError(index, "expect ,", tokens);
+            }else
                 break;
         }
 
@@ -255,6 +276,7 @@ public class Parser {
     private StmtNode.Compound parseCompoundStatement(int index) throws ParserError {
         index = match(index, LEFT_BRACE);
 
+        ParserError best_error = null;
         Vector<StmtNode> items = new Vector<>();
         StmtNode item;
 
@@ -265,7 +287,8 @@ public class Parser {
                 items.add(item);
                 continue;
             } catch (ParserError parserError) {
-//                parserError.printStackTrace();
+                if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                    best_error = parserError;
             }
 
             try {
@@ -274,62 +297,85 @@ public class Parser {
                 items.add(item);
                 continue;
             } catch (ParserError parserError) {
-//                parserError.printStackTrace();
+                if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                    best_error = parserError;
             }
 
             break;
         }
-        index = match(index, RIGHT_BRACE);
 
-        last_index = index;
-        return new StmtNode.Compound(items);
+        try {
+            index = match(index, RIGHT_BRACE);
+            last_index = index;
+            return new StmtNode.Compound(items);
+        } catch (ParserError parserError) {
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
+        }
+
+        throw best_error;
     }
 
     private StmtNode parseStatement(int index) throws ParserError {
+        ParserError best_error = null;
+
         try {
             return parseIfStatement(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
         try {
             return parseWhileStatement(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
         try {
             return parseReturnStatement(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
         try {
             return parseBreakStatement(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
         try {
             return parseContinueStatement(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
         try {
             return parseCompoundStatement(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
         try {
             return parseEmptyStatement(index);
-
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
-        return parseExpressionStatement(index);
+        try {
+            return parseExpressionStatement(index);
+        } catch (ParserError parserError) {
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
+        }
+
+        throw best_error;
     }
 
     private StmtNode parseIfStatement(int index) throws ParserError {
@@ -410,7 +456,7 @@ public class Parser {
             last_index = index + 1;
             return new StmtNode.Empty();
         }
-        throw new ParserError();
+        throw new ParserError(index, "expect semicolon", tokens);
     }
 
     // endregion
@@ -426,6 +472,8 @@ public class Parser {
 
     private ExprNode parseAssignment(int index) throws ParserError {
         int save = index;
+
+        ParserError best_error = null;
 
         ExprNode node;
         try {
@@ -453,10 +501,18 @@ public class Parser {
             }
             return node;
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
 
-        return parseLogicalOr(save);
+        try {
+            return parseLogicalOr(save);
+        } catch (ParserError parserError) {
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
+        }
+
+        throw best_error;
     }
 
     private ExprNode parseLogicalOr(int index) throws ParserError {
@@ -639,6 +695,8 @@ public class Parser {
 
     private ExprNode parseCast(int index) throws ParserError {
         int save = index;
+        ParserError best_error = null;
+
         try {
             index = match(index, LEFT_PAREN);
             Vector<Token> specs = parseDeclSpecifiers(index);
@@ -647,9 +705,17 @@ public class Parser {
             ExprNode expr = parseCast(index);
             return new ExprNode.Cast(specs, expr);
         } catch (ParserError parserError) {
-            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
-        return parseUnary(save);
+        try {
+            return parseUnary(save);
+        } catch (ParserError parserError) {
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
+        }
+
+        throw best_error;
     }
 
     /**
@@ -686,11 +752,7 @@ public class Parser {
                 index += 1;
                 ExprNode expr = parseExperssion(index);
                 index = last_index;
-                try {
-                    index = match(index, RIGHT_BRACKET);
-                } catch (ParserError parserError) {
-//                    parserError.printStackTrace();
-                }
+                index = match(index, RIGHT_BRACKET);
                 node = new ExprNode.ArraySub(node, expr);
                 continue;
             }
@@ -725,23 +787,35 @@ public class Parser {
     }
 
     private ExprNode parsePrimary(int index) throws ParserError {
+        ParserError best_error = null;
+
         try {
             return parseIdentifier(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
         try {
             return parseNumber(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
         try {
             return parseString(index);
         } catch (ParserError parserError) {
-//            parserError.printStackTrace();
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
         }
-        ExprNode expr = parseParenExpression(index);
-        return expr;
+        try {
+            return parseParenExpression(index);
+        } catch (ParserError parserError) {
+            if(best_error == null || best_error.parsed_amount < parserError.parsed_amount)
+                best_error = parserError;
+        }
+//        throw best_error;
+        // TODO: throw which error is better?
+        throw new ParserError(index, "expect expression", tokens);
     }
 
     private ExprNode parseIdentifier(int index) throws ParserError {
@@ -760,7 +834,7 @@ public class Parser {
                 constant = Double.valueOf(tokens.get(index).value);
             return new ExprNode.Number(constant);
         } else {
-            throw new ParserError();
+            throw new ParserError(index, "expect number", tokens);
         }
     }
 
@@ -822,7 +896,7 @@ public class Parser {
                 break;
         }
         if(depth != 0)
-            throw new ParserError();
+            throw new ParserError(index, msg, tokens);
         // TODO: raise mismatch error.
         return i;
     }
@@ -839,8 +913,7 @@ public class Parser {
                 break;
         }
         if(depth != 0)
-            throw new ParserError();
-        // TODO: raise mismatch error.
+            throw new ParserError(index, msg,tokens);
         return i;
     }
     // endregion
@@ -848,13 +921,15 @@ public class Parser {
     //region Function Relates Tokens
 
     private int match(int index, TokenType... types) throws ParserError {
-        if (isAtEnd(index))
-            throw new ParserError();
+        if (isAtEnd(index)) {
+
+            throw new ParserError(index, "expect " + strRepr(types),tokens);
+        }
         if (check(index, types))
             return index + 1;
-        else
-            throw new ParserError();
-        // TODO: raise error.
+        else {
+            throw new ParserError(index, "expect " + strRepr(types),tokens);
+        }
     }
 
     private boolean check(int index, TokenType... types) {
@@ -868,6 +943,18 @@ public class Parser {
 
     private boolean isAtEnd(int index) {
         return index >= tokens.size();
+    }
+
+    private String strRepr(TokenType... types) {
+        StringBuilder builder = new StringBuilder();
+
+        for(int i = 0; i<types.length; ++i) {
+            if(i != 0)
+                builder.append(" or ");
+            builder.append(types[i].toString().toLowerCase());
+        }
+
+        return builder.toString();
     }
     //endregion
 }

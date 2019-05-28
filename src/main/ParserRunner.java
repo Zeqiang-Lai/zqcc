@@ -2,12 +2,14 @@ package main;
 
 import ast.StmtNode;
 import ast.XMLPrinter;
+import error.ErrorCollector;
 import lexer.Lexer;
 import lexer.SourceBuffer;
 import lexer.Token;
 import lexer.TokenType;
 import parser.Parser;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -42,13 +44,30 @@ public class ParserRunner {
         return tokens;
     }
 
+    static void printUsage() {
+        String usage = "OVERVIEW: ZQC compiler\n\n" +
+                "USAGE: lexer [options] <inputs>\n\n" +
+                "OPTIONS:\n" +
+                "\t-xml    \tUse xml as input.\n" +
+                "\t-o <file>\tWrite output to <file>";
+        System.out.println(usage);
+    }
+
     public static void main(String[] args) {
-        String source_path = "test/test1.c";
+        String source_path;
+        String output_name;
+
         if(args.length == 0) {
-            System.out.println("No specified source file. Use default: "+source_path);
+            printUsage();
+            return;
         } else {
             source_path = args[0];
+            for(int i=0; i<args.length; ++i) {
+
+            }
         }
+        File f = new File(source_path);
+
 
         String source = null;
         try {
@@ -56,29 +75,37 @@ public class ParserRunner {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
+        ErrorCollector errorCollector = ErrorCollector.getInstance();
+        errorCollector.setFile_name(f.getName());
+
         SourceBuffer buff = new SourceBuffer(source);
-
-
         Lexer lexer = new Lexer(buff);
         Vector<Token> tokens = new Vector<>();
         Token token = lexer.scan();
-//        tokens.add(token);
         while (token.type != TokenType.EOF) {
             tokens.add(token);
             token = lexer.scan();
         }
 
-        tokens = readTokensFromXML("test/test1.c.xml");
+//        tokens = readTokensFromXML("test/test1.c.xml");
+
 
         Parser parser = new Parser(tokens);
         StmtNode.CompilationUnit tree = parser.parse();
+
+        if(errorCollector.hasError()) {
+            errorCollector.show();
+            return;
+        }
 
         XMLPrinter printer = new XMLPrinter();
         String xml = printer.print(tree);
 
         PrintWriter out;
         try {
-            out = new PrintWriter("test/test1.c.tree.xml");
+            out = new PrintWriter(source_path+".tree.xml");
             out.println(xml);
             out.close();
         } catch (FileNotFoundException e) {

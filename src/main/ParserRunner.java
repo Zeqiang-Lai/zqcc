@@ -96,8 +96,8 @@ public class ParserRunner {
     }
 
     static void printUsage() {
-        String usage = "OVERVIEW: ZQC compiler\n\n" +
-                "USAGE: lexer [options] <inputs>\n\n" +
+        String usage = "OVERVIEW: ZQC parser\n\n" +
+                "USAGE: parser [options] <inputs>\n\n" +
                 "OPTIONS:\n" +
                 "\t-xml    \tUse xml as input.\n" +
                 "\t-o <file>\tWrite output to <file>.xml";

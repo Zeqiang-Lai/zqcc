@@ -3,6 +3,7 @@ package error;
 import lexer.Token;
 
 import java.util.List;
+import static error.TextColor.*;
 
 public class ParserError extends CompilerError {
     public enum ErrorType {
@@ -19,22 +20,19 @@ public class ParserError extends CompilerError {
         else
             this.parsed_amount = parsed-1;
 
-        // TODO: put color
-        String red_color = (char)27 + "[31m";
-        String green_color = (char)27 + "[32m";
-        String reset_color = (char)27  + "[0m";
-        String bold_color = "\033[1m";
-
         Token token = tokens.get(parsed_amount);
-
 
         StringBuilder builder = new StringBuilder();
         builder.append(token.line);
-        builder.append(bold_color);
-        builder.append(red_color);
+        if(!is_windows) {
+            builder.append(bold_color);
+            builder.append(red_color);
+        }
         builder.append(" error: ");
-        builder.append(reset_color);
-        builder.append(bold_color);
+        if(!is_windows) {
+            builder.append(reset_color);
+            builder.append(bold_color);
+        }
         builder.append(msg);
         switch (type) {
             case AT:
@@ -50,6 +48,7 @@ public class ParserError extends CompilerError {
         builder.append(token.value);
 
         builder.append("\n    ");
+
         // TODO: get source line from lexer.
         StringBuilder line = new StringBuilder();
         int left = parsed_amount;
@@ -67,9 +66,12 @@ public class ParserError extends CompilerError {
             builder.append(" ");
         if(type == ErrorType.AFTER)
             builder.append(" ");
-        builder.append(green_color);
-        builder.append("^");
-        builder.append(reset_color);
+
+        if(is_windows)
+            builder.append("^");
+        else
+            builder.append(green_color + "^" + reset_color);
+
         this.description = builder.toString();
     }
 

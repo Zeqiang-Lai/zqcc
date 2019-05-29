@@ -2,18 +2,34 @@
 
 The compiler for zqc(a subset of C).
 
-## Usage
-```shell
-OVERVIEW: zqcc compiler
+## Getting started
 
-USAGE: zqcc [options] <input>
+### Compile
+
+```
+// compile lexer
+make lexer
+// compile parser
+make parser
+```
+
+### Run
+
+Parser:
+
+```shell
+OVERVIEW: ZQC parser
+
+USAGE: parser [options] <inputs>
 
 OPTIONS:
-    -l      Lexer output
-    -p      Parser output
-    -dir    Output directory
+	-xml    	Use xml as input.
+	-o <file>	Write output to <file>.xml
 ```
 
 ## TODO
 - [ ] Optimize the structure of the AST. There are too much redundant code right now.
 
+- [ ] Improve error recovery
+  - [ ] skip definiete error symbol
+- [ ] support comment

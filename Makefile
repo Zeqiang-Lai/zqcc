@@ -15,11 +15,11 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 lexer: $(SRC) $(BIN_DIR)
-	javac -d $(BINDIR) -sourcepath $(SRCDIR) $(SRC)
+	javac -source 1.8 -target 1.8 -d $(BINDIR) -sourcepath $(SRCDIR) $(SRC)
 	cd bin && jar cfe lexer.jar main.LexerRunner . && cd ..
 
 parser: $(SRC) $(BIN_DIR)
-	javac -d $(BINDIR) -sourcepath $(SRCDIR) $(SRC)
+	javac -source 1.8 -target 1.8 -d $(BINDIR) -sourcepath $(SRCDIR) $(SRC)
 	cd bin && jar cfe parser.jar main.ParserRunner . && cd ..
 
 run-lexer: 
